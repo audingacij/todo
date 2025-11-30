@@ -1,90 +1,74 @@
 import { test, expect } from '@playwright/test';
+import { TodoPage } from '../pages/todo-page';
 
-test('verify to do creation', async ({ page }) => {
-  await page.goto('https://todo-app.tallinn-learning.ee/');
-  await page.getByTestId('text-input').fill('buy bread')
-  await page.getByTestId('text-input').press('Enter');
-  await expect(page.getByTestId('todo-item-label')).toBeVisible();
+test.describe('Todo app tests', () => {
+    let todo: TodoPage;
+
+    test.beforeEach(async ({ page }) => {
+        todo = new TodoPage(page);
+        await todo.open();
+    });
+
+    test('verify to do creation', async () => {
+        await todo.addTodo('buy bread');
+        await expect(todo.items.first()).toBeVisible();
+    });
+
+    test('verify two items creation', async () => {
+        await todo.addTodo('buy bread');
+        await todo.addTodo('buy something');
+        await expect(todo.items).toHaveCount(2);
+    });
+
+    test('verify completed filter', async () => {
+        await todo.addTodo('buy bread');
+        await todo.addTodo('buy something');
+        await todo.filterCompletedTodos();
+        await expect(todo.items).toHaveCount(0);
+    });
+
+    test('verify active filter', async () => {
+        await todo.addTodo('buy bread');
+        await todo.addTodo('buy something');
+        await todo.filterActiveTodos();
+        await expect(todo.items).toHaveCount(2);
+    });
+
+    test('verify All filter', async () => {
+        await todo.addTodo('buy bread');
+        await todo.addTodo('buy something');
+        await todo.filterAllTodos();
+        await expect(todo.items).toHaveCount(2);
+    });
+
+    test('verify active and completed filters for completed task', async () => {
+        await todo.addTodo('buy bread');
+        await todo.filterAllTodos();
+        await todo.toggleTodo();
+        await todo.filterActiveTodos();
+        await expect(todo.items).toHaveCount(0);
+        await todo.filterCompletedTodos();
+        await expect(todo.items).toHaveCount(1);
+    });
+
+    test('verify clear completed', async () => {
+        await todo.addTodo('buy eggs');
+        await expect(todo.items).toHaveCount(1);
+        await todo.toggleTodo();
+        await todo.clearCompleted();
+        await expect(todo.items).toHaveCount(0);
+    });
+
+    test('verify item can be deleted', async () => {
+        await todo.addTodo('buy eggs');
+        await todo.deleteTodoByText('buy eggs');
+        await expect(todo.items).toHaveCount(0);
+    });
+
+    test('verify after item deletion only one item is visible', async () => {
+        await todo.addTodo('buy bread');
+        await todo.addTodo('buy something');
+        await todo.deleteTodoByText('buy bread');
+        await expect(todo.items).toHaveCount(1);
+    });
 });
-
-test('verify two items creation', async ({ page }) => {
-    await page.goto('https://todo-app.tallinn-learning.ee/');
-    await page.getByTestId('text-input').fill('buy bread')
-    await page.getByTestId('text-input').press('Enter');
-    await page.getByTestId('text-input').fill('buy something')
-    await page.getByTestId('text-input').press('Enter');
-    await expect(page.getByTestId('todo-item-label')).toHaveCount(2);
-});
-
-test('verify completed filter', async ({ page }) => {
-    await page.goto('https://todo-app.tallinn-learning.ee/');
-    await page.getByTestId('text-input').fill('buy bread')
-    await page.getByTestId('text-input').press('Enter');
-    await page.getByTestId('text-input').fill('buy something')
-    await page.getByTestId('text-input').press('Enter');
-    await page.getByRole('link', { name: 'Completed' }).click
-    await expect(page.getByTestId('todo-item-label')).toHaveCount(0);
-});
-
-test('verify active filter', async ({ page }) => {
-    await page.goto('https://todo-app.tallinn-learning.ee/');
-    await page.getByTestId('text-input').fill('buy bread')
-    await page.getByTestId('text-input').press('Enter');
-    await page.getByTestId('text-input').fill('buy something')
-    await page.getByTestId('text-input').press('Enter');
-    await page.getByRole('link', { name: 'Active' }).click
-    await expect(page.getByTestId('todo-item-label')).toHaveCount(2);
-});
-
-test('verify All filter', async ({ page }) => {
-    await page.goto('https://todo-app.tallinn-learning.ee/');
-    await page.getByTestId('text-input').fill('buy bread')
-    await page.getByTestId('text-input').press('Enter');
-    await page.getByTestId('text-input').fill('buy something')
-    await page.getByTestId('text-input').press('Enter');
-    await page.getByRole('link', { name: 'All' }).click
-    await expect(page.getByTestId('todo-item-label')).toHaveCount(2);
-});
-
-test('verify active and completed filters for completed task', async ({ page }) => {
-    await page.goto('https://todo-app.tallinn-learning.ee/');
-    await page.getByTestId('text-input').fill('buy bread')
-    await page.getByTestId('text-input').press('Enter');
-    await page.getByRole('link', { name: 'All' }).click
-    await page.getByTestId('todo-item-toggle').click()
-    await page.getByRole('link', { name: 'Active' }).click()
-    await expect(page.getByTestId('todo-item-label')).toHaveCount(0);
-    await page.getByRole('link', { name: 'Completed' }).click()
-    await expect(page.getByTestId('todo-item-label')).toHaveCount(1);
-});
-
-test('verify clear completed', async ({ page }) => {
-    await page.goto('https://todo-app.tallinn-learning.ee/');
-    await page.getByTestId('text-input').fill('buy eggs');
-    await page.getByTestId('text-input').press('Enter');
-    await expect(page.getByTestId('todo-item-label')).toHaveCount(1);
-    await page.getByTestId('todo-item-toggle').click();
-    await page.getByRole('button', { name: 'Clear completed' }).click();
-    await expect(page.getByTestId('todo-item-label')).toHaveCount(0);
-});
-
-test('verify item can be deleted', async ({ page }) => {
-    await page.goto('https://todo-app.tallinn-learning.ee/');
-    await page.getByTestId('text-input').fill('buy eggs');
-    await page.getByTestId('text-input').press('Enter');
-    await page.getByTestId('todo-item-label').hover();
-    await page.getByTestId('todo-item-button').click();
-});
-
-test.only('verify after item deletion only one item is visible', async ({ page }) => {
-    await page.goto('https://todo-app.tallinn-learning.ee/');
-    await page.getByTestId('text-input').fill('buy bread')
-    await page.getByTestId('text-input').press('Enter');
-    await page.getByTestId('text-input').fill('buy something')
-    await page.getByTestId('text-input').press('Enter');
-    await page.getByTestId('todo-item-label').filter({ hasText: 'buy bread' }).hover()
-    await page.getByRole('button', { name: '×' }).click()
-    await expect(page.getByTestId('todo-item-label')).toHaveCount(1);
-});
-
-
